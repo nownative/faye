@@ -125,7 +125,7 @@ Faye.NodeAdapter = Faye.Class({
 
   _callWithParams: function(request, response, params) {
     if (!params.message)
-      return this._returnError(response, {message: 'Received request with no message: ' + this._formatRequest(request)});
+      return this._returnWarning(response, {message: 'Received request with no message: ' + this._formatRequest(request)});
 
     try {
       this.debug('Received message via HTTP ' + request.method + ': ?', params.message);
@@ -256,9 +256,24 @@ Faye.NodeAdapter = Faye.Class({
       string += " -H 'Content-Type: " + request.headers['content-type'] + "'";
       string += " -d '" + request.body + "'";
     }
+    var out = {};
+    out.ip = request.connection.remoteAddress;
+    out.headers = request.headers;
+    string += '\nFull Call:\n' + JSON.stringify(out,0,2);
+    //add aditional output
     return string;
   },
+  //use for non critical incidents
+  _returnWarning: function(response, error) {
+    var message = error.message;
+    if (error.stack) message += '\nBacktrace:\n' + error.stack;
+    this.warn(message);
 
+    if (!response) return;
+
+    response.writeHead(400, this.TYPE_TEXT);
+    response.end('Bad request');
+  },
   _returnError: function(response, error) {
     var message = error.message;
     if (error.stack) message += '\nBacktrace:\n' + error.stack;
